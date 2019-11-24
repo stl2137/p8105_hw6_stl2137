@@ -9,3 +9,38 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
+# Problem 1
+
+```{r}
+birthweight_data <- read_csv("./data/birthweight.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    babysex = as.factor(babysex),
+    frace = as.factor(frace),
+    malform = as.factor(malform),
+    mrace = as.factor(mrace)
+  )
+```
+
+Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+
+```{r}
+birthweight_model <- lm(bwt ~ babysex + bhead + blength + gaweeks + malform + smoken, data = birthweight_data)
+
+birthweight_data %>% 
+  modelr::add_predictions(birthweight_model) %>% 
+  modelr::add_residuals(birthweight_model) %>% 
+  ggplot(aes(x = pred, y = resid)) + geom_point()
+```
+
+Compare your model to two others:
+
+* One using length at birth and gestational age as predictors (main effects only)
+
+* One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+
+```{r}
+
+```
+
