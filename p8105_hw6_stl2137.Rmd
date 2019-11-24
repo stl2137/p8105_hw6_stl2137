@@ -7,6 +7,8 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
+library(modelr)
+set.seed(1)
 ```
 
 # Problem 1
@@ -22,7 +24,7 @@ birthweight_data <- read_csv("./data/birthweight.csv") %>%
   )
 ```
 
-Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+I chose the following variables to build a model that predicts baby birth weight based off prior knowledge of what variables are associated with birthweight: `babysex` or the gender, `bhead` or the baby’s head circumference at birth in centimeters, `blength` or the baby’s length at birth in centimeters, `gaweeks` or the gestational age in weeks, `malform` or presence of malformations that could affect weight, and `smoken` or average number of cigarettes smoked per day during pregnancy.
 
 ```{r}
 birthweight_model <- lm(bwt ~ babysex + bhead + blength + gaweeks + malform + smoken, data = birthweight_data)
@@ -33,12 +35,6 @@ birthweight_data %>%
   ggplot(aes(x = pred, y = resid)) + geom_point()
 ```
 
-Compare your model to two others:
-
-* One using length at birth and gestational age as predictors (main effects only)
-
-* One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
-
 Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
 
 ```{r}
@@ -46,6 +42,40 @@ main_effects_model <- lm(bwt ~ blength + gaweeks, data = birthweight_data)
 
 interactions_model <- lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead *babysex + blength*babysex + bhead*blength*babysex, data = birthweight_data)
 ```
+
+```{r}
+cv_df = 
+  crossv_mc(birthweight_data, 4342) 
+
+cv_df =
+  cv_df %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
+
+cv_df <- 
+  cv_df %>% 
+  mutate(birthweight_train_mod = map(train, ~lm(bwt ~ babysex + bhead + blength + gaweeks + malform + smoken, data = .x)), 
+         main_effects_train_mod = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+         interaction_train_mod = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead *babysex + blength*babysex + bhead*blength*babysex, data = .x))
+  ) %>% 
+  mutate(
+    rmse_birthweight = map2_dbl(birthweight_train_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_main_effects = map2_dbl(main_effects_train_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_interaction = map2_dbl(interaction_train_mod, test, ~rmse(model = .x, data = .y))
+  )
+
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
 
 # Problem 2
 
@@ -61,5 +91,12 @@ weather_df =
     tmin = tmin / 10,
     tmax = tmax / 10) %>%
   select(name, id, everything())
+```
+
+```{r}
+simple_temp_model <- lm(tmax ~ tmin, data = weather_df) 
+
+simple_temp_model %>% 
+  broom::glance()
 ```
 
