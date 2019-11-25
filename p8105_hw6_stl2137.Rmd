@@ -32,7 +32,13 @@ birthweight_model <- lm(bwt ~ babysex + bhead + blength + gaweeks + malform + sm
 birthweight_data %>% 
   modelr::add_predictions(birthweight_model) %>% 
   modelr::add_residuals(birthweight_model) %>% 
-  ggplot(aes(x = pred, y = resid)) + geom_point()
+  ggplot(aes(x = pred, y = resid)) + 
+  geom_point() +
+  labs(
+    title = "Fitted Birthweight Values vs. Residual Birthweight Values",
+    x = "predicted values",
+    y = "residuals"
+  )
 ```
 
 ```{r}
@@ -91,16 +97,14 @@ weather_df =
   select(name, id, everything())
 ```
 
-## MAKE SURE CHANGE TO 5000
-
-Bootstrap for $r^2$
+### Bootstrap for r.squared
 
 ```{r}
 simple_temp_model <- lm(tmax ~ tmin, data = weather_df) 
 
 r.squared_bootstrap <-
   weather_df %>%
-  bootstrap(50) %>% 
+  bootstrap(5000) %>% 
   mutate(
     model = map(strap, ~lm(tmax ~ tmin, data = .x)),
     results = map(model, broom::glance)
@@ -116,13 +120,17 @@ r.squared_bootstrap %>%
 quantile(r.squared_bootstrap[[1]], c(0.025, 0.975))
  
 ```
+The distribution of r.squared values appears to be normal around 0.91 with mild left skewness. 
 
-Bootstrap for $log(\hat{\beta_0}+\hat{\beta_1})$
+We are 95% confident that the true value of r.squared is between 0.8935077 and 0.9274548.
+
+
+### Bootstrap for log of (beta0 + beta1)
 
 ```{r}
 log_betas_bootstrap <-
   weather_df %>%
-  bootstrap(50) %>% 
+  bootstrap(5000) %>% 
   mutate(
     model = map(strap, ~lm(tmax ~ tmin, data = .x)),
     results = map(model, broom::tidy)
@@ -150,6 +158,8 @@ log_betas_bootstrap %>%
   geom_histogram()
 
 quantile(log_betas_bootstrap[[1]], c(0.025, 0.975))
-
 ```
 
+The log(beta0+beta1) appears to be normally distributed around 2.11.
+
+We are 95% confident that the true value of log(beta0+beta1) is between 2.053950 and 2.164993.
